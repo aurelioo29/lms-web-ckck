@@ -12,15 +12,171 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
 }
 
+html,
 body {
-  background: var(--background);
+  margin: 0;
+  min-height: 100%;
+  background: #f5f7fb;
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+a {
+  text-decoration: none;
+}
+
+/* Auth */
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background:
+    radial-gradient(
+      circle at top left,
+      rgba(22, 119, 255, 0.16),
+      transparent 35%
+    ),
+    linear-gradient(135deg, #f7f9ff 0%, #eef4ff 100%);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 430px;
+  border-radius: 18px;
+  box-shadow: 0 20px 70px rgba(15, 23, 42, 0.12);
+}
+
+.auth-header {
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.auth-title {
+  margin-bottom: 4px !important;
+}
+
+.auth-footer {
+  margin-top: 18px;
+  text-align: center;
+}
+
+.mb-4 {
+  margin-bottom: 16px;
+}
+
+/* AntD Menu Override khusus sidebar.
+   Iya, ini sedikit CSS karena AntD Menu punya style internal.
+   Kalau dipaksa Tailwind semua, kita cuma berantem dengan library. */
+.lms-sidebar-menu,
+.lms-sidebar-menu.ant-menu,
+.lms-sidebar-menu .ant-menu,
+.lms-sidebar-menu .ant-menu-sub,
+.lms-sidebar-menu .ant-menu-item,
+.lms-sidebar-menu .ant-menu-submenu,
+.lms-sidebar-menu .ant-menu-submenu-title {
+  background: #062b4f !important;
+}
+
+.lms-sidebar-menu {
+  border-inline-end: 0 !important;
+}
+
+.lms-sidebar-menu .ant-menu-item,
+.lms-sidebar-menu .ant-menu-submenu-title {
+  height: 36px !important;
+  line-height: 36px !important;
+  margin: 0 !important;
+  width: 100% !important;
+  border-radius: 0 !important;
+  color: rgba(255, 255, 255, 0.86) !important;
+}
+
+.lms-sidebar-menu .ant-menu-sub .ant-menu-item {
+  padding-left: 42px !important;
+}
+
+.lms-sidebar-menu .ant-menu-item:hover,
+.lms-sidebar-menu .ant-menu-submenu-title:hover {
+  background: #0a3a68 !important;
+  color: #ffffff !important;
+}
+
+.lms-sidebar-menu .ant-menu-item-selected {
+  background: #1677ff !important;
+  color: #ffffff !important;
+}
+
+.lms-sidebar-menu .ant-menu-title-content {
+  font-size: 13px;
+}
+
+.lms-sidebar-menu .ant-menu-submenu-arrow {
+  color: rgba(255, 255, 255, 0.76) !important;
+}
+
+.lms-sidebar-menu.ant-menu-inline-collapsed .ant-menu-item,
+.lms-sidebar-menu.ant-menu-inline-collapsed .ant-menu-submenu-title {
+  padding-inline: calc(50% - 8px) !important;
+}
+
+.maintenance-card {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  border-radius: 14px;
+  border: 1px solid #fde68a;
+  background: linear-gradient(135deg, #fffbeb 0%, #fff7d6 100%);
+}
+
+.maintenance-icon {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #f59e0b;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.maintenance-content {
+  min-width: 0;
+}
+
+.maintenance-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 3px 8px;
+  margin-bottom: 6px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.maintenance-title {
+  margin-bottom: 4px;
+  color: #1f2937;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.maintenance-description {
+  color: #6b4e16;
+  font-size: 12.5px;
+  line-height: 1.55;
 }
