@@ -243,9 +243,15 @@ async function main() {
   const settings = [
     {
       key: "site_name",
-      value: "Next LMS",
+      value: "CKCK LMS",
       type: "string",
       description: "Website name",
+    },
+    {
+      key: "site_description",
+      value: "Learning Management System",
+      type: "string",
+      description: "Website description",
     },
     {
       key: "allow_registration",
@@ -254,10 +260,28 @@ async function main() {
       description: "Allow public registration",
     },
     {
+      key: "approval_required",
+      value: "true",
+      type: "boolean",
+      description: "User registration requires approval",
+    },
+    {
+      key: "maintenance_mode",
+      value: "false",
+      type: "boolean",
+      description: "Enable maintenance mode",
+    },
+    {
       key: "default_user_role",
       value: "STUDENT",
       type: "string",
       description: "Default role after user approval",
+    },
+    {
+      key: "timezone",
+      value: "Asia/Jakarta",
+      type: "string",
+      description: "Application timezone",
     },
   ];
 
