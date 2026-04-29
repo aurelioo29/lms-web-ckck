@@ -310,6 +310,8 @@ model ActivityLog {
   description String?
   ipAddress   String?
   userAgent   String?
+  oldData     Json?
+  newData     Json?
   metadata    Json?
   createdAt   DateTime @default(now())
 
