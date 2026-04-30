@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button, Modal, Tag, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { Edit, Plus, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { Edit, Eye, Plus, Trash2 } from "lucide-react";
 
 import DataTable from "@/components/shared/data-table/data-table";
 import type { DataTableFilterValues } from "@/components/shared/data-table/types";
@@ -246,6 +247,10 @@ export default function CoursesTable() {
       align: "center",
       render: (_, record) => (
         <div className="flex justify-center gap-1">
+          <Link href={`/dashboard/courses/${record.id}`}>
+            <Button type="link" icon={<Eye size={14} />} />
+          </Link>
+
           <Button
             type="link"
             icon={<Edit size={14} />}
