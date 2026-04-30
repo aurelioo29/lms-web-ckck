@@ -17,6 +17,9 @@ import {
   ShieldCheck,
   UserCog,
   Users,
+  LibraryBig,
+  Trophy,
+  Star,
 } from "lucide-react";
 
 type DashboardSidebarProps = {
@@ -89,10 +92,22 @@ export default function DashboardSidebar({
           show: can(permissions, "courses.view"),
         },
         {
-          title: "Lessons",
-          href: "/dashboard/lessons",
-          icon: FileText,
-          show: can(permissions, "lessons.view"),
+          title: "My Courses",
+          href: "/dashboard/my-courses",
+          icon: LibraryBig,
+          show: true,
+        },
+        {
+          title: "My Points",
+          href: "/dashboard/points",
+          icon: Star,
+          show: true,
+        },
+        {
+          title: "Leaderboard",
+          href: "/dashboard/leaderboard",
+          icon: Trophy,
+          show: true,
         },
       ],
     },
