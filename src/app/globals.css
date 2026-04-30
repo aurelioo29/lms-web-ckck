@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "react-quill-new/dist/quill.snow.css";
 
 :root {
   --background: #ffffff;
@@ -179,4 +180,90 @@ a {
   color: #6b4e16;
   font-size: 12.5px;
   line-height: 1.55;
+}
+
+.lesson-quill .ql-editor {
+  min-height: 260px;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.lesson-quill .ql-editor img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 16px 0;
+  border-radius: 8px;
+}
+
+.lesson-content {
+  font-size: 15px;
+  line-height: 1.8;
+  color: #1e293b;
+}
+
+.lesson-content img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 18px 0;
+  border-radius: 8px;
+}
+
+.lesson-content p {
+  margin-bottom: 14px;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.lesson-content {
+  font-size: 15px;
+  line-height: 1.85;
+  color: #1e293b;
+}
+
+.lesson-content h1,
+.lesson-content h2,
+.lesson-content h3 {
+  font-weight: 700;
+  color: #0f172a;
+  margin: 20px 0 10px;
+}
+
+.lesson-content p {
+  margin-bottom: 14px;
+}
+
+.lesson-content img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 18px 0;
+  border-radius: 10px;
+}
+
+.lesson-content ul,
+.lesson-content ol {
+  padding-left: 24px;
+  margin-bottom: 14px;
+}
+
+.lesson-content blockquote {
+  border-left: 4px solid #3b82f6;
+  padding-left: 14px;
+  color: #475569;
+  margin: 16px 0;
+}
+
+.lesson-content pre {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 14px;
+  border-radius: 8px;
+  overflow: auto;
 }
