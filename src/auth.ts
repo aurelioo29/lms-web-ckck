@@ -15,6 +15,8 @@ class MaintenanceModeError extends CredentialsSignin {
 }
 
 export const authConfig = {
+  trustHost: true,
+
   pages: {
     signIn: "/login",
   },

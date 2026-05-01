@@ -72,6 +72,8 @@ export default function LoginForm() {
         callbackUrl,
       });
 
+      console.log("LOGIN RESULT:", result);
+
       if (!result || result.error || result.ok !== true) {
         const errorCode = result?.code || result?.error;
 
@@ -80,7 +82,7 @@ export default function LoginForm() {
             "Sistem sedang maintenance. Hanya Superadmin yang bisa login sementara.",
           );
 
-          router.push("/maintenance");
+          window.location.href = "/maintenance";
           return;
         }
 
@@ -90,9 +92,11 @@ export default function LoginForm() {
 
       message.success("Login berhasil.");
 
-      router.replace(result.url || callbackUrl || "/dashboard");
-      router.refresh();
-    } catch {
+      const redirectUrl = result.url || callbackUrl || "/dashboard";
+
+      window.location.href = redirectUrl;
+    } catch (error) {
+      console.error("LOGIN ERROR:", error);
       message.error("Login gagal. Silakan coba lagi.");
     } finally {
       setLoading(false);
