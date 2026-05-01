@@ -1,12 +1,19 @@
-import { auth } from "@/auth";
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
 const protectedRoutes = ["/dashboard"];
 const authRoutes = ["/login", "/register"];
 
-export default auth((req) => {
+export async function middleware(req: NextRequest) {
   const { nextUrl } = req;
-  const isLoggedIn = !!req.auth;
+
+  const token = await getToken({
+    req,
+    secret: process.env.AUTH_SECRET,
+  });
+
+  const isLoggedIn = !!token;
 
   const isProtectedRoute = protectedRoutes.some((route) =>
     nextUrl.pathname.startsWith(route),
@@ -18,6 +25,7 @@ export default auth((req) => {
 
   if (isProtectedRoute && !isLoggedIn) {
     const loginUrl = new URL("/login", nextUrl.origin);
+
     loginUrl.searchParams.set(
       "callbackUrl",
       `${nextUrl.pathname}${nextUrl.search}`,
@@ -31,7 +39,7 @@ export default auth((req) => {
   }
 
   return NextResponse.next();
-});
+}
 
 export const config = {
   matcher: ["/dashboard/:path*", "/login", "/register"],
