@@ -17,19 +17,22 @@ export default auth((req) => {
   );
 
   if (isProtectedRoute && !isLoggedIn) {
-    const loginUrl = new URL("/login", nextUrl);
-    loginUrl.searchParams.set("callbackUrl", nextUrl.pathname);
+    const loginUrl = new URL("/login", nextUrl.origin);
+    loginUrl.searchParams.set(
+      "callbackUrl",
+      `${nextUrl.pathname}${nextUrl.search}`,
+    );
 
     return NextResponse.redirect(loginUrl);
   }
 
   if (isAuthRoute && isLoggedIn) {
-    return NextResponse.redirect(new URL("/dashboard", nextUrl));
+    return NextResponse.redirect(new URL("/dashboard", nextUrl.origin));
   }
 
   return NextResponse.next();
 });
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/dashboard/:path*", "/login", "/register"],
 };
