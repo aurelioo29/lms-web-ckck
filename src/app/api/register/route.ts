@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-
+import { Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/prisma";
 import { createActivityLog } from "@/lib/activity-log";
 import { notifySuperadmins, createNotification } from "@/lib/notification";
@@ -131,7 +131,7 @@ export async function POST(req: Request) {
         : `${user.name} melakukan registrasi akun dan langsung aktif.`,
       ipAddress,
       userAgent,
-      oldData: null,
+      oldData: Prisma.JsonNull,
       newData: {
         id: user.id,
         name: user.name,

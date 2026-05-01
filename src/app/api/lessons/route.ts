@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { Prisma } from "@/generated/prisma";
 
@@ -9,6 +9,7 @@ import { createActivityLog } from "@/lib/activity-log";
 import { getRequestMeta } from "@/lib/request";
 
 const lessonSchema = z.object({
+  sectionId: z.string().min(1, "Section wajib dipilih"),
   title: z.string().min(2, "Title lesson minimal 2 karakter"),
   type: z.enum(["TEXT", "VIDEO", "FILE", "QUIZ", "ASSIGNMENT"]).default("TEXT"),
   contentHtml: z.string().optional().nullable(),
@@ -18,12 +19,6 @@ const lessonSchema = z.object({
   order: z.number().optional(),
   isPreview: z.boolean().optional(),
 });
-
-type RouteParams = {
-  params: Promise<{
-    id: string;
-  }>;
-};
 
 function createSlug(title: string) {
   return title
@@ -54,7 +49,7 @@ async function generateLessonSlug(sectionId: string, title: string) {
   return slug;
 }
 
-export async function GET(_: Request, { params }: RouteParams) {
+export async function GET(req: NextRequest) {
   const session = await auth();
 
   if (!session) {
@@ -65,11 +60,34 @@ export async function GET(_: Request, { params }: RouteParams) {
     return NextResponse.json({ message: "Forbidden" }, { status: 403 });
   }
 
-  const { id } = await params;
+  const sectionId = req.nextUrl.searchParams.get("sectionId");
+
+  if (!sectionId) {
+    return NextResponse.json(
+      { message: "sectionId wajib dikirim." },
+      { status: 400 },
+    );
+  }
+
+  const section = await prisma.courseSection.findUnique({
+    where: {
+      id: sectionId,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!section) {
+    return NextResponse.json(
+      { message: "Section tidak ditemukan." },
+      { status: 404 },
+    );
+  }
 
   const lessons = await prisma.lesson.findMany({
     where: {
-      sectionId: id,
+      sectionId,
     },
     orderBy: {
       order: "asc",
@@ -81,7 +99,7 @@ export async function GET(_: Request, { params }: RouteParams) {
   });
 }
 
-export async function POST(req: Request, { params }: RouteParams) {
+export async function POST(req: NextRequest) {
   const session = await auth();
 
   if (!session) {
@@ -93,12 +111,13 @@ export async function POST(req: Request, { params }: RouteParams) {
   }
 
   try {
-    const { id } = await params;
     const body = await req.json();
     const payload = lessonSchema.parse(body);
 
     const section = await prisma.courseSection.findUnique({
-      where: { id },
+      where: {
+        id: payload.sectionId,
+      },
     });
 
     if (!section) {
@@ -110,18 +129,18 @@ export async function POST(req: Request, { params }: RouteParams) {
 
     const lastLesson = await prisma.lesson.findFirst({
       where: {
-        sectionId: id,
+        sectionId: payload.sectionId,
       },
       orderBy: {
         order: "desc",
       },
     });
 
-    const slug = await generateLessonSlug(id, payload.title);
+    const slug = await generateLessonSlug(payload.sectionId, payload.title);
 
     const lesson = await prisma.lesson.create({
       data: {
-        sectionId: id,
+        sectionId: payload.sectionId,
         title: payload.title,
         slug,
         type: payload.type,
@@ -133,7 +152,7 @@ export async function POST(req: Request, { params }: RouteParams) {
         videoUrl: payload.videoUrl || null,
         fileUrl: payload.fileUrl || null,
         order: payload.order ?? (lastLesson ? lastLesson.order + 1 : 1),
-        isPreview: payload.isPreview || false,
+        isPreview: payload.isPreview ?? false,
       },
     });
 
@@ -150,7 +169,7 @@ export async function POST(req: Request, { params }: RouteParams) {
       newData: lesson,
       metadata: {
         courseId: section.courseId,
-        sectionId: id,
+        sectionId: payload.sectionId,
       },
     });
 

@@ -1,14 +1,27 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo, useRef } from "react";
+import { forwardRef, useMemo, useRef } from "react";
 import { Form, Input, InputNumber, Modal, Select, Switch, message } from "antd";
 
 import type { LessonItem, LessonType } from "../types/course-builder.type";
 
-const ReactQuill = dynamic(() => import("react-quill-new"), {
-  ssr: false,
-});
+const ReactQuill = dynamic(
+  async () => {
+    const { default: RQ } = await import("react-quill-new");
+
+    const Quill = forwardRef<any, any>((props, ref) => (
+      <RQ ref={ref} {...props} />
+    ));
+
+    Quill.displayName = "ReactQuill";
+
+    return Quill;
+  },
+  {
+    ssr: false,
+  },
+);
 
 type LessonFormValues = {
   title: string;

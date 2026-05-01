@@ -1,12 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type { Key } from "react";
 import { Table } from "antd";
-import type {
-  ColumnsType,
-  TableRowSelection,
-  TableProps,
-} from "antd/es/table/interface";
+import type { TableProps } from "antd";
+import type { ColumnsType, TableRowSelection } from "antd/es/table/interface";
 
 import DataTableFilter from "./data-table-filter";
 import DataTableToolbar from "./data-table-toolbar";
@@ -45,6 +43,36 @@ type DataTableProps<T extends { id: string }> = {
   };
 };
 
+function getColumnDataIndex<T extends { id: string }>(
+  column: ColumnsType<T>[number],
+) {
+  if ("dataIndex" in column) {
+    return column.dataIndex;
+  }
+
+  return undefined;
+}
+
+function getColumnKey<T extends { id: string }>(
+  column: ColumnsType<T>[number],
+  index: number,
+) {
+  const dataIndex = getColumnDataIndex(column);
+
+  return String(column.key || dataIndex || index);
+}
+
+function getColumnLabel<T extends { id: string }>(
+  column: ColumnsType<T>[number],
+  index: number,
+) {
+  if (typeof column.title === "string") {
+    return column.title;
+  }
+
+  return getColumnKey(column, index);
+}
+
 export default function DataTable<T extends { id: string }>({
   rowKey = "id",
   loading,
@@ -62,16 +90,13 @@ export default function DataTable<T extends { id: string }>({
   onSortChange,
   pagination,
 }: DataTableProps<T>) {
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
 
   const initialVisibility = useMemo<DataTableColumnVisibilityItem[]>(
     () =>
       columns.map((column, index) => ({
-        key: String(column.key || column.dataIndex || index),
-        label:
-          typeof column.title === "string"
-            ? column.title
-            : String(column.key || column.dataIndex || index),
+        key: getColumnKey(column, index),
+        label: getColumnLabel(column, index),
         visible: true,
       })),
     [columns],
@@ -88,9 +113,9 @@ export default function DataTable<T extends { id: string }>({
     );
   }
 
-  const visibleColumns = useMemo(() => {
+  const visibleColumns = useMemo<ColumnsType<T>>(() => {
     return columns.filter((column, index) => {
-      const key = String(column.key || column.dataIndex || index);
+      const key = getColumnKey(column, index);
       const visibility = columnVisibility.find((item) => item.key === key);
 
       return visibility?.visible !== false;
@@ -145,7 +170,7 @@ export default function DataTable<T extends { id: string }>({
         pagination={pagination}
       />
 
-      <Table
+      <Table<T>
         rowKey={rowKey}
         bordered
         size="small"
