@@ -26,7 +26,7 @@ export default function DashboardLayoutClient({
         <section className="flex-1 px-4 pb-4">
           <DashboardBreadcrumb />
 
-          <div className="min-h-[calc(100vh-112px)] p-3 mt-3">{children}</div>
+          <div className="mt-3 min-h-[calc(100vh-112px)] p-3">{children}</div>
         </section>
       </main>
     </div>

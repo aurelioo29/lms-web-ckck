@@ -6,6 +6,10 @@ import { CredentialsSignin } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { getBooleanSetting } from "@/lib/settings";
 
+class InvalidLoginError extends CredentialsSignin {
+  code = "credentials";
+}
+
 class MaintenanceModeError extends CredentialsSignin {
   code = "maintenance";
 }
@@ -14,16 +18,20 @@ export const authConfig = {
   pages: {
     signIn: "/login",
   },
+
   session: {
     strategy: "jwt",
     maxAge: 60 * 60 * 3,
   },
+
   jwt: {
     maxAge: 60 * 60 * 3,
   },
+
   providers: [
     Credentials({
       name: "credentials",
+
       credentials: {
         username: {
           label: "Username",
@@ -34,6 +42,7 @@ export const authConfig = {
           type: "password",
         },
       },
+
       async authorize(credentials) {
         const username = String(credentials?.username || "")
           .toLowerCase()
@@ -42,11 +51,13 @@ export const authConfig = {
         const password = String(credentials?.password || "");
 
         if (!username || !password) {
-          throw new Error("Username dan password wajib diisi.");
+          throw new InvalidLoginError();
         }
 
         const user = await prisma.user.findUnique({
-          where: { username },
+          where: {
+            username,
+          },
           include: {
             roles: {
               include: {
@@ -65,25 +76,25 @@ export const authConfig = {
         });
 
         if (!user) {
-          throw new Error("Username atau password salah.");
+          throw new InvalidLoginError();
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.password);
 
         if (!isPasswordValid) {
-          throw new Error("Username atau password salah.");
+          throw new InvalidLoginError();
         }
 
         if (user.status === "PENDING") {
-          throw new Error("Akun Anda masih menunggu persetujuan admin.");
+          throw new InvalidLoginError();
         }
 
         if (user.status === "DECLINED") {
-          throw new Error("Pendaftaran akun Anda ditolak.");
+          throw new InvalidLoginError();
         }
 
         if (user.status === "SUSPENDED" || user.status === "INACTIVE") {
-          throw new Error("Akun Anda sedang dinonaktifkan.");
+          throw new InvalidLoginError();
         }
 
         const roles = user.roles.map((item) => item.role.name);
@@ -102,8 +113,12 @@ export const authConfig = {
         );
 
         await prisma.user.update({
-          where: { id: user.id },
-          data: { lastLoginAt: new Date() },
+          where: {
+            id: user.id,
+          },
+          data: {
+            lastLoginAt: new Date(),
+          },
         });
 
         await prisma.activityLog.create({
@@ -130,6 +145,7 @@ export const authConfig = {
       },
     }),
   ],
+
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
@@ -142,9 +158,11 @@ export const authConfig = {
     },
 
     async session({ session, token }) {
-      session.user.id = token.id as string;
-      session.user.roles = token.roles as string[];
-      session.user.permissions = token.permissions as string[];
+      if (session.user) {
+        session.user.id = token.id as string;
+        session.user.roles = (token.roles as string[]) || [];
+        session.user.permissions = (token.permissions as string[]) || [];
+      }
 
       return session;
     },

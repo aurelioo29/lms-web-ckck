@@ -1,16 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  Alert,
-  Button,
-  Card,
-  Form,
-  Input,
-  Spin,
-  Typography,
-  message,
-} from "antd";
+import { Button, Card, Form, Input, Spin, Typography, message } from "antd";
 import { LockOutlined, UserOutlined } from "@ant-design/icons";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -71,43 +62,41 @@ export default function LoginForm() {
 
   async function onFinish(values: LoginFormValues) {
     setLoading(true);
+    message.destroy();
 
-    const result = await signIn("credentials", {
-      username: values.username,
-      password: values.password,
-      redirect: false,
-      callbackUrl,
-    });
+    try {
+      const result = await signIn("credentials", {
+        username: values.username,
+        password: values.password,
+        redirect: false,
+        callbackUrl,
+      });
 
-    setLoading(false);
+      if (!result || result.error || result.ok !== true) {
+        const errorCode = result?.code || result?.error;
 
-    if (result?.error) {
-      if (result.code === "maintenance") {
-        message.destroy();
-        message.warning(
-          "Sistem sedang maintenance. Hanya Superadmin yang bisa login sementara.",
-        );
+        if (errorCode === "maintenance") {
+          message.warning(
+            "Sistem sedang maintenance. Hanya Superadmin yang bisa login sementara.",
+          );
 
-        router.push("/maintenance");
-        return;
-      }
+          router.push("/maintenance");
+          return;
+        }
 
-      if (result.code === "credentials") {
-        message.destroy();
         message.error("Username atau password salah.");
         return;
       }
 
-      message.destroy();
-      message.error(
-        "Login gagal. Periksa username/password atau status akun Anda.",
-      );
-      return;
-    }
+      message.success("Login berhasil.");
 
-    message.success("Login berhasil.");
-    router.push(callbackUrl);
-    router.refresh();
+      router.replace(result.url || callbackUrl || "/dashboard");
+      router.refresh();
+    } catch {
+      message.error("Login gagal. Silakan coba lagi.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -127,6 +116,7 @@ export default function LoginForm() {
               <Title level={2} className="auth-title">
                 Login LMS
               </Title>
+
               <Text type="secondary">
                 Masuk pakai username dan password. Email sudah cuti.
               </Text>
@@ -156,7 +146,12 @@ export default function LoginForm() {
               <Form.Item
                 label="Username"
                 name="username"
-                rules={[{ required: true, message: "Username wajib diisi" }]}
+                rules={[
+                  {
+                    required: true,
+                    message: "Username wajib diisi",
+                  },
+                ]}
               >
                 <Input
                   size="large"
@@ -169,7 +164,12 @@ export default function LoginForm() {
               <Form.Item
                 label="Password"
                 name="password"
-                rules={[{ required: true, message: "Password wajib diisi" }]}
+                rules={[
+                  {
+                    required: true,
+                    message: "Password wajib diisi",
+                  },
+                ]}
               >
                 <Input.Password
                   size="large"

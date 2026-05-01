@@ -18,6 +18,7 @@ export default async function DashboardLayout({
   }
 
   const maintenanceMode = await getBooleanSetting("maintenance_mode", false);
+
   const roles = session.user.roles || [];
   const isSuperadmin = roles.includes("SUPERADMIN");
 
