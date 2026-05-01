@@ -2,74 +2,32 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Button, Empty, Layout, Progress, Tag, message } from "antd";
-import {
-  ArrowLeft,
-  CheckCircle2,
-  Circle,
-  FileText,
-  Lock,
-  PlayCircle,
-  Trophy,
-} from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Button, Empty, Layout, Select, Tag, message } from "antd";
+import { ArrowLeft, ArrowRight, FileText, MessageSquare } from "lucide-react";
+
 import StudentAttendanceCard from "@/features/attendance/components/student-attendance-card";
+import CourseChatRoom from "@/features/chat/components/course-chat-room";
 
-const { Sider, Content } = Layout;
+import LearningCourseSidebar from "./learning-course-sidebar";
+import { getLessonColor } from "./learning-sidebar-utils";
+import type { LearnData, Lesson, Section } from "../types/learning.type";
 
-type Lesson = {
-  id: string;
-  title: string;
-  type: "TEXT" | "VIDEO" | "FILE" | "QUIZ" | "ASSIGNMENT";
-  contentHtml: string | null;
-  videoUrl: string | null;
-  fileUrl: string | null;
-  order: number;
-  isPreview: boolean;
-};
-
-type Section = {
-  id: string;
-  title: string;
-  order: number;
-  lessons: Lesson[];
-};
-
-type LearnData = {
-  course: {
-    id: string;
-    title: string;
-    description: string | null;
-    thumbnail: string | null;
-    level: string | null;
-    sections: Section[];
-  };
-  enrollment: {
-    id: string;
-    status: string;
-    progress: number;
-  };
-  completedLessonIds: string[];
-};
-
-function getLessonIcon(type: Lesson["type"]) {
-  if (type === "VIDEO") return <PlayCircle size={16} />;
-  return <FileText size={16} />;
-}
-
-function getLessonColor(type: Lesson["type"]) {
-  if (type === "TEXT") return "blue";
-  if (type === "VIDEO") return "purple";
-  if (type === "FILE") return "orange";
-  if (type === "QUIZ") return "green";
-  if (type === "ASSIGNMENT") return "volcano";
-
-  return "default";
-}
+const { Content } = Layout;
 
 export default function LearningPageClient({ courseId }: { courseId: string }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const lessonIdFromUrl = searchParams.get("lesson");
+
   const [data, setData] = useState<LearnData | null>(null);
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
   const [loadingComplete, setLoadingComplete] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [discussionOpen, setDiscussionOpen] = useState(false);
+
+  const sidebarWidth = sidebarCollapsed ? 72 : 252;
+  const discussionWidth = discussionOpen ? 420 : 0;
 
   const allLessons = useMemo(() => {
     return data?.course.sections.flatMap((section) => section.lessons) || [];
@@ -79,17 +37,39 @@ export default function LearningPageClient({ courseId }: { courseId: string }) {
     return new Set(data?.completedLessonIds || []);
   }, [data]);
 
+  const activeLessonIndex = activeLesson
+    ? allLessons.findIndex((lesson) => lesson.id === activeLesson.id)
+    : -1;
+
+  const previousLesson =
+    activeLessonIndex > 0 ? allLessons[activeLessonIndex - 1] : null;
+
+  const nextLesson =
+    activeLessonIndex >= 0 && activeLessonIndex < allLessons.length - 1
+      ? allLessons[activeLessonIndex + 1]
+      : null;
+
   const activeLessonCompleted = activeLesson
     ? completedSet.has(activeLesson.id)
     : false;
 
-  const completedCount = completedSet.size;
-  const totalLessons = allLessons.length;
+  function openLesson(lesson: Lesson) {
+    setActiveLesson(lesson);
 
-  async function fetchData(keepActiveLessonId?: string) {
+    router.replace(`/learn/${courseId}?lesson=${lesson.id}`, {
+      scroll: false,
+    });
+  }
+
+  async function fetchData() {
     const res = await fetch(`/api/learn/${courseId}`, {
       cache: "no-store",
     });
+
+    if (res.status === 401) {
+      router.replace("/login");
+      return;
+    }
 
     const json = await res.json();
 
@@ -105,15 +85,24 @@ export default function LearningPageClient({ courseId }: { courseId: string }) {
         (section: Section) => section.lessons,
       ) || [];
 
-    const nextActiveLesson =
-      lessons.find((lesson) => lesson.id === keepActiveLessonId) ||
+    const selectedFromUrl =
+      lessons.find((lesson) => lesson.id === lessonIdFromUrl) || null;
+
+    const firstIncomplete =
       lessons.find(
         (lesson) => !json.data.completedLessonIds.includes(lesson.id),
-      ) ||
-      lessons[0] ||
-      null;
+      ) || null;
 
-    setActiveLesson(nextActiveLesson);
+    const selectedLesson =
+      selectedFromUrl || firstIncomplete || lessons[0] || null;
+
+    setActiveLesson(selectedLesson);
+
+    if (selectedLesson && !lessonIdFromUrl) {
+      router.replace(`/learn/${courseId}?lesson=${selectedLesson.id}`, {
+        scroll: false,
+      });
+    }
   }
 
   async function completeLesson() {
@@ -140,16 +129,10 @@ export default function LearningPageClient({ courseId }: { courseId: string }) {
 
       message.success(json.message || "Lesson selesai.");
 
-      await fetchData(activeLesson.id);
-
-      const currentIndex = allLessons.findIndex(
-        (lesson) => lesson.id === activeLesson.id,
-      );
-
-      const nextLesson = allLessons[currentIndex + 1];
+      await fetchData();
 
       if (nextLesson) {
-        setActiveLesson(nextLesson);
+        openLesson(nextLesson);
       }
     } catch (error) {
       message.error(error instanceof Error ? error.message : "Terjadi error.");
@@ -172,140 +155,82 @@ export default function LearningPageClient({ courseId }: { courseId: string }) {
   }
 
   return (
-    <Layout className="min-h-screen bg-slate-100">
-      <Sider
-        width={340}
-        className="sticky left-0 top-0 h-screen overflow-auto border-r border-slate-200 bg-white"
+    <Layout className="min-h-screen overflow-x-hidden bg-slate-100">
+      <LearningCourseSidebar
+        course={data.course}
+        activeLessonId={activeLesson?.id}
+        completedLessonIds={completedSet}
+        progress={data.enrollment.progress}
+        collapsed={sidebarCollapsed}
+        discussionOpen={discussionOpen}
+        onToggleCollapsed={() => setSidebarCollapsed((value) => !value)}
+        onToggleDiscussion={() => setDiscussionOpen((value) => !value)}
+        onOpenLesson={openLesson}
+      />
+
+      <Content
+        className="min-h-screen overflow-x-hidden transition-all duration-300"
+        style={{
+          marginLeft: sidebarWidth,
+          marginRight: discussionWidth,
+          width: `calc(100vw - ${sidebarWidth}px - ${discussionWidth}px)`,
+        }}
       >
-        <div className="border-b border-slate-200 p-4">
-          <Link href="/dashboard/my-courses">
-            <Button className="mb-4" icon={<ArrowLeft size={14} />}>
-              Back to My Courses
-            </Button>
-          </Link>
+        <div className="w-full max-w-full p-4">
+          {/* Course Header */}
+          <div className="mb-4 rounded-2xl border border-slate-200 bg-white px-6 py-5 shadow-sm">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <Link href="/dashboard/my-courses">
+                <Button icon={<ArrowLeft size={14} />}>
+                  Back to My Courses
+                </Button>
+              </Link>
 
-          <div className="overflow-hidden rounded-xl border border-slate-200">
-            <div className="h-28 bg-slate-100">
-              {data.course.thumbnail ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={data.course.thumbnail}
-                  alt={data.course.title}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center text-slate-400">
-                  <FileText size={36} />
-                </div>
-              )}
+              <Button
+                icon={<MessageSquare size={15} />}
+                onClick={() => setDiscussionOpen((value) => !value)}
+              >
+                Discussion
+              </Button>
             </div>
 
-            <div className="p-3">
-              <div className="mb-2 flex flex-wrap gap-2">
-                <Tag color="blue">{data.course.level || "General"}</Tag>
+            <h1 className="m-0 text-2xl font-bold text-slate-900">
+              {data.course.title}
+            </h1>
 
-                {data.enrollment.status === "COMPLETED" ? (
-                  <Tag color="green" icon={<Trophy size={12} />}>
-                    COMPLETED
-                  </Tag>
-                ) : (
-                  <Tag color="orange">{data.enrollment.status}</Tag>
-                )}
-              </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+              <Link href="/dashboard" className="text-blue-600">
+                Dashboard
+              </Link>
 
-              <h2 className="m-0 text-base font-bold text-slate-900">
-                {data.course.title}
-              </h2>
+              <span className="text-slate-400">/</span>
 
-              <p className="mt-1 line-clamp-2 text-xs text-slate-500">
-                {data.course.description || "No description."}
-              </p>
+              <Link href="/dashboard/my-courses" className="text-blue-600">
+                My courses
+              </Link>
+
+              <span className="text-slate-400">/</span>
+
+              <span className="text-blue-600">{data.course.title}</span>
+
+              {activeLesson ? (
+                <>
+                  <span className="text-slate-400">/</span>
+                  <span className="text-blue-600">{activeLesson.title}</span>
+                </>
+              ) : null}
             </div>
           </div>
 
-          <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
-            <div className="mb-1 flex items-center justify-between text-xs text-slate-600">
-              <span>Course Progress</span>
-              <span>
-                {completedCount}/{totalLessons} lessons
-              </span>
-            </div>
-
-            <Progress
-              percent={data.enrollment.progress}
-              size="small"
-              status={data.enrollment.progress >= 100 ? "success" : "active"}
-            />
-          </div>
-        </div>
-
-        <div className="pb-4">
-          {data.course.sections.map((section) => (
-            <div key={section.id} className="border-b border-slate-100 p-3">
-              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
-                {section.order}. {section.title}
-              </p>
-
-              <div className="space-y-1">
-                {section.lessons.map((lesson) => {
-                  const completed = completedSet.has(lesson.id);
-                  const active = activeLesson?.id === lesson.id;
-
-                  return (
-                    <button
-                      key={lesson.id}
-                      type="button"
-                      onClick={() => setActiveLesson(lesson)}
-                      className={[
-                        "flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left text-sm transition",
-                        active
-                          ? "bg-blue-50 text-blue-700 ring-1 ring-blue-100"
-                          : "text-slate-600 hover:bg-slate-50 hover:text-blue-600",
-                      ].join(" ")}
-                    >
-                      <span className="mt-[2px]">
-                        {completed ? (
-                          <CheckCircle2 size={16} className="text-green-600" />
-                        ) : (
-                          <Circle size={16} />
-                        )}
-                      </span>
-
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-medium">
-                          {lesson.title}
-                        </span>
-
-                        <span className="mt-1 flex items-center gap-2 text-[11px] text-slate-400">
-                          {getLessonIcon(lesson.type)}
-                          {lesson.type}
-
-                          {lesson.isPreview ? (
-                            <span className="text-cyan-600">Preview</span>
-                          ) : null}
-                        </span>
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      </Sider>
-
-      <Content className="min-h-screen overflow-auto bg-slate-100 p-6">
-        <div className="mx-auto max-w-5xl">
-          <div className="mb-4">
-            <StudentAttendanceCard courseId={courseId} />
-          </div>
+          <StudentAttendanceCard courseId={courseId} />
 
           {!activeLesson ? (
-            <div className="rounded-xl bg-white p-10">
-              <Empty description="Pilih lesson dari sidebar." />
+            <div className="rounded-2xl border border-slate-200 bg-white p-10 shadow-sm">
+              <Empty description="Pilih materi dari sidebar." />
             </div>
           ) : (
-            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+              {/* Lesson Header */}
               <div className="border-b border-slate-200 px-6 py-5">
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   <Tag color={getLessonColor(activeLesson.type)}>
@@ -324,15 +249,9 @@ export default function LearningPageClient({ courseId }: { courseId: string }) {
                 </div>
 
                 <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h1 className="m-0 text-2xl font-bold text-slate-900">
-                      {activeLesson.title}
-                    </h1>
-                    <p className="m-0 mt-1 text-sm text-slate-500">
-                      Complete this lesson to earn points and update your
-                      progress.
-                    </p>
-                  </div>
+                  <h2 className="m-0 text-xl font-semibold text-slate-900">
+                    {activeLesson.title}
+                  </h2>
 
                   <Button
                     type="primary"
@@ -345,26 +264,27 @@ export default function LearningPageClient({ courseId }: { courseId: string }) {
                 </div>
               </div>
 
-              <div className="px-6 py-6">
-                {activeLesson.type === "TEXT" ||
-                activeLesson.type === "ASSIGNMENT" ||
-                activeLesson.type === "QUIZ" ? (
+              {/* Lesson Content */}
+              <div className="max-w-full overflow-x-hidden px-6 py-7">
+                {(activeLesson.type === "TEXT" ||
+                  activeLesson.type === "ASSIGNMENT" ||
+                  activeLesson.type === "QUIZ") && (
                   <div
-                    className="lesson-content"
+                    className="lesson-content max-w-full overflow-x-hidden break-words"
                     dangerouslySetInnerHTML={{
                       __html:
                         activeLesson.contentHtml ||
-                        "<p>Belum ada content. Kosong seperti meeting tanpa agenda.</p>",
+                        "<p>Belum ada content. Kosong seperti rapat tanpa notulen.</p>",
                     }}
                   />
-                ) : null}
+                )}
 
-                {activeLesson.type === "VIDEO" ? (
-                  <div>
+                {activeLesson.type === "VIDEO" && (
+                  <div className="max-w-full overflow-x-hidden">
                     {activeLesson.videoUrl ? (
                       <iframe
                         src={activeLesson.videoUrl}
-                        className="h-[460px] w-full rounded-lg border"
+                        className="h-[460px] w-full max-w-full rounded-lg border"
                         allowFullScreen
                       />
                     ) : (
@@ -375,19 +295,23 @@ export default function LearningPageClient({ courseId }: { courseId: string }) {
 
                     {activeLesson.contentHtml ? (
                       <div
-                        className="lesson-content mt-6"
+                        className="lesson-content mt-6 max-w-full overflow-x-hidden break-words"
                         dangerouslySetInnerHTML={{
                           __html: activeLesson.contentHtml,
                         }}
                       />
                     ) : null}
                   </div>
-                ) : null}
+                )}
 
-                {activeLesson.type === "FILE" ? (
-                  <div>
+                {activeLesson.type === "FILE" && (
+                  <div className="max-w-full overflow-x-hidden">
                     {activeLesson.fileUrl ? (
-                      <a href={activeLesson.fileUrl} target="_blank">
+                      <a
+                        href={activeLesson.fileUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
                         <Button icon={<FileText size={14} />}>
                           Download File
                         </Button>
@@ -400,19 +324,81 @@ export default function LearningPageClient({ courseId }: { courseId: string }) {
 
                     {activeLesson.contentHtml ? (
                       <div
-                        className="lesson-content mt-6"
+                        className="lesson-content mt-6 max-w-full overflow-x-hidden break-words"
                         dangerouslySetInnerHTML={{
                           __html: activeLesson.contentHtml,
                         }}
                       />
                     ) : null}
                   </div>
-                ) : null}
+                )}
+              </div>
+
+              {/* Lesson Navigation */}
+              <div className="flex items-center justify-between gap-4 border-t border-slate-200 px-6 py-4">
+                <Button
+                  disabled={!previousLesson}
+                  type="link"
+                  icon={<ArrowLeft size={14} />}
+                  onClick={() => previousLesson && openLesson(previousLesson)}
+                  className="max-w-[260px] truncate"
+                >
+                  {previousLesson ? previousLesson.title : "Previous"}
+                </Button>
+
+                <Select
+                  className="w-[320px]"
+                  placeholder="Jump to..."
+                  value={activeLesson.id}
+                  onChange={(lessonId) => {
+                    const lesson = allLessons.find(
+                      (item) => item.id === lessonId,
+                    );
+
+                    if (lesson) {
+                      openLesson(lesson);
+                    }
+                  }}
+                  options={allLessons.map((lesson) => ({
+                    label: lesson.title,
+                    value: lesson.id,
+                  }))}
+                />
+
+                <Button
+                  disabled={!nextLesson}
+                  type="link"
+                  onClick={() => nextLesson && openLesson(nextLesson)}
+                  className="max-w-[260px] truncate"
+                >
+                  {nextLesson ? nextLesson.title : "Next"}
+                  <ArrowRight size={14} className="ml-2" />
+                </Button>
               </div>
             </div>
           )}
         </div>
       </Content>
+
+      {/* Discussion Panel */}
+      {discussionOpen ? (
+        <aside className="fixed bottom-0 right-0 top-0 z-50 w-[420px] border-l border-slate-200 bg-white shadow-xl">
+          <div className="flex h-16 items-center justify-between border-b border-slate-200 px-4">
+            <div className="flex items-center gap-2 font-semibold text-slate-900">
+              <MessageSquare size={17} />
+              Course Discussion
+            </div>
+
+            <Button size="small" onClick={() => setDiscussionOpen(false)}>
+              Close
+            </Button>
+          </div>
+
+          <div className="h-[calc(100vh-64px)] overflow-auto p-4">
+            <CourseChatRoom courseId={courseId} />
+          </div>
+        </aside>
+      ) : null}
     </Layout>
   );
 }
