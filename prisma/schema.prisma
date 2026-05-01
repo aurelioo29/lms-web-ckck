@@ -49,28 +49,29 @@ enum PointType {
 }
 
 model User {
-  id            String     @id @default(uuid()) @db.Uuid
-  name          String
-  email         String     @unique
-  username      String    @unique
-  password      String
-  avatar        String?
-  phone         String?
-  bio           String?
-  status        UserStatus @default(PENDING)
-  lastLoginAt   DateTime?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  id          String     @id @default(uuid()) @db.Uuid
+  name        String
+  email       String     @unique
+  username    String     @unique
+  password    String
+  avatar      String?
+  phone       String?
+  bio         String?
+  status      UserStatus @default(PENDING)
+  lastLoginAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
-  roles                UserRole[]
-  courses              Course[] @relation("CourseInstructor")
-  enrollments          Enrollment[]
-  lessonProgress       LessonProgress[]
-  activityLogs         ActivityLog[]
-  pointTransactions    PointTransaction[]
-  notifications        Notification[]
-  approvalRequests     UserApproval[] @relation("UserApprovalTarget")
-  reviewedApprovals    UserApproval[] @relation("UserApprovalReviewer")
+  roles             UserRole[]
+  courses           Course[]           @relation("CourseInstructor")
+  enrollments       Enrollment[]
+  lessonProgress    LessonProgress[]
+  activityLogs      ActivityLog[]
+  pointTransactions PointTransaction[]
+  notifications     Notification[]
+  approvalRequests  UserApproval[]     @relation("UserApprovalTarget")
+  reviewedApprovals UserApproval[]     @relation("UserApprovalReviewer")
+  chatMessages      ChatMessage[]
 
   @@map("users")
 }
@@ -96,7 +97,7 @@ model Permission {
   module      String
   createdAt   DateTime @default(now())
 
-  roles       RolePermission[]
+  roles RolePermission[]
 
   @@map("permissions")
 }
@@ -107,8 +108,8 @@ model UserRole {
   roleId    String   @db.Uuid
   createdAt DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@unique([userId, roleId])
   @@map("user_roles")
@@ -171,6 +172,7 @@ model Course {
   enrollments Enrollment[]
   enrollKeys  EnrollKey[]
   attendances AttendanceSession[]
+  chatRooms   ChatRoom[]
 
   @@map("courses")
 }
@@ -333,4 +335,29 @@ model Notification {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notifications")
+}
+
+model ChatRoom {
+  id        String   @id @default(uuid()) @db.Uuid
+  courseId  String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  course   Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+
+  @@unique([courseId])
+  @@map("chat_rooms")
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid()) @db.Uuid
+  roomId    String   @db.Uuid
+  userId    String   @db.Uuid
+  message   String
+  createdAt DateTime @default(now())
+
+  room ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("chat_messages")
 }
